@@ -1,37 +1,219 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 1. make:model - Less-Known Possible Options
 
-## About Laravel
+Summary of this lesson:
+- Understanding all available options for make:model command
+- Using interactive model creation prompts
+- Generating related files (migrations, controllers, etc.)
+- Creating resource controllers with automatic model binding
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+if you want to use artisan commands 
+You don't need to remember them. All available options can be checked by providing -h or --help to the artisan command.
+here is a simple example 
+I think creating a Migration and Controller together with the Model is the most common.
+the code **php artisan make:model -mc**
+The resource Controller will be created if you provide the -r option.
+In the Controller, we have seven methods, and to them, the Route Model Binding is injected automatically.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+The same is if you create the Form Request with the resource Controller.
+the code **php artisan make:model -mcR**
+All Form Requests are injected automatically.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Or if you need everything using the option -a or --all, everything will be generated.
+## 2. Singular or Plural Models? What about multiple words?
+to change the conventional naming method use 
+class Role extends Model
+{
+    protected $table = 'user_roles';
+}
 
-## Learning Laravel
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 3. saving a model $fillable and $guarded
+in the project
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## 4. Model Properties: Tables, Keys, Increments, Pages and Dates
+Summary of this lesson:
+- Customizing database table names and primary keys
+- Configuring auto-increment settings
+- Setting up pagination defaults
+- Managing timestamp properties and naming
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+class Task extends Model
+{
+    protected $table = 'project_tasks'; 
+}
 
-## Laravel Sponsors
+Customize Primary Key
+The next thing you can override is the primary key. By default, the primary key is id. But you may change it in the migration to, for example, task_id.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+public function up(): void
+{
+    Schema::create('tasks', function (Blueprint $table) {
+        $table->id('task_id'); 
+        $table->timestamps();
+    });
+}
+
+Then, in the Model, you must provide the $primaryKey.
+
+class Task extends Model
+{
+    protected $table = 'project_tasks';
+ 
+    protected $primaryKey = 'task_id'; 
+}
+
+Customize Auto-Increments
+What if you don't want it to be auto increment? Maybe you will set it up yourself manually with some logic. Then, you will set the $incrementing to false.
+
+class Task extends Model
+{
+    protected $table = 'project_tasks';
+ 
+    protected $primaryKey = 'task_id';
+ 
+    public $incrementing = false; 
+}
+
+
+And then, in your migration, probably, you should have unsignedBigInteger() without auto-increment, instead of id().
+
+Or, if you want to use UUIDs or ULIDs specifically for that there is a trait
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+ 
+class Task extends Model
+{
+    use HasUuids; 
+ 
+    protected $table = 'project_tasks';
+ 
+    protected $primaryKey = 'task_id';
+ 
+    public $incrementing = false;
+}
+
+
+Customize Pagination
+The next thing you can provide or override is a property called per page, which is, by default, 15. It would be used in all of your pagination requests. So, for example, we can set it to 10.
+
+class Task extends Model
+{
+    protected $table = 'project_tasks';
+ 
+    protected $primaryKey = 'task_id';
+ 
+    public $incrementing = false;
+ 
+    protected $perPage = 10; 
+}
+
+Customize Timestamps: Don't Use Them
+And a few things about timestamps. By default, in your migration, you have timestamps that are created_at and updated_at. You can refuse to use those.
+
+You may have some other logic for timestamps or want to use something other than that. In your Model, you can set $timestamps to false.
+
+class Task extends Model
+{
+    protected $table = 'project_tasks';
+ 
+    protected $primaryKey = 'task_id';
+ 
+    public $incrementing = false;
+ 
+    protected $perPage = 10;
+ 
+    public $timestamps = false; 
+}
+
+
+Then you don't need the timestamps() in the Migration.
+
+Customize Timestamps: Rename Them
+In another case, the names of your timestamps are different. For example, if you have a database from an older project, not even Laravel, maybe you have not created the created_at and updated_at, but time_created and time_updated. Then, you can override the constants.
+class Task extends Model
+{
+    protected $table = 'project_tasks';
+ 
+    protected $primaryKey = 'task_id';
+ 
+    public $incrementing = false;
+ 
+    protected $perPage = 10;
+ 
+    public $timestamps = false;
+ 
+    const CREATED_AT = 'time_created'; 
+ 
+    const UPDATED_AT = 'time_updated'; 
+}
+And, of course, then, in the migration, you don't use timestamps(). You create those fields manually.
+
+
+Bonus: Quickly Check Table/Model Properties
+If you made custom changes to your Model or DB Table, you may have forgotten about some of them. Laravel can help you to perform a quick check.
+
+It has two artisan commands showing information about the database and specific database tables.
+
+You can use the db:show artisan command to see information about database and tables. This command will show you general information about your database and all your migrated tables with their sizes.
+
+Another artisan command is model:show, which shows information about a provided table. This command will show all the table's fields, relationships, and observers.
+
+## 5. Customize Model Default Template with Stubs
+
+Summary of this lesson:
+- Publishing and customizing model stubs
+- Modifying default model template structure
+- Removing default traits like HasFactory
+- Understanding stub customization options
+
+The default Eloquent Model is generated with a structure as below.
+<?php
+ 
+namespace App\Models;
+ 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+ 
+class Post extends Model
+{
+    use HasFactory;
+}
+
+And it has a trait HasFactory. What if you want to remove it because you won't use it in the project and want all new Models not to have it?
+
+You can overwrite the default structure by publishing stubs.
+php artisan stub:publish
+Now, you have a new folder /stubs at the root of your project. You can change more than a Model stub if your project needs it. The Model stub looks as below.
+stubs/model.stub:
+<?php
+ 
+namespace {{ namespace }};
+ 
+{{ factoryImport }}
+use Illuminate\Database\Eloquent\Model;
+ 
+class {{ class }} extends Model
+{
+    {{ factory }}
+}
+
+You can add and remove what you need from the stub.
+
+stubs/model.stub:
+
+<?php
+ 
+namespace {{ namespace }};
+ 
+{{ factoryImport }}   -- remove
+use Illuminate\Database\Eloquent\Model;
+ 
+class {{ class }} extends Model
+{
+    {{ factory }}   --remove 
+}
 
 ### Premium Partners
 
