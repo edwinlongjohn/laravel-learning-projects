@@ -507,6 +507,13 @@ class User extends Authenticatable
     // ...
 }
 
+Equivalent pre-PHP 8.0 code
+Before attributes, this would typically be done in documentation blocks:
+/**
+ * @ObservedBy(UserObserver::class)
+ */
+class User { ... }
+
 Or it can be registered in the AppServiceProvider.
 
 app/Providers/AppServiceProvider.php:
