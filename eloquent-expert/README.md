@@ -169,7 +169,7 @@ Summary of this lesson:
 - Understanding stub customization options
 
 The default Eloquent Model is generated with a structure as below.
-<?php
+
  
 namespace App\Models;
  
@@ -412,7 +412,7 @@ Then, when the save is called, you will see the change becomes true.
 
 The name change becomes true because the name was changed, but the email wasn't changed.
 
-### 9 Model Observers and Their Methods
+## 9. Model Observers and Their Methods
 Summary of this lesson:
 - Creating and configuring Model Observers
 - Understanding Observer lifecycle methods
