@@ -1,15 +1,15 @@
-
 ## 1. make:model - Less-Known Possible Options
 
 Summary of this lesson:
-- Understanding all available options for make:model command
-- Using interactive model creation prompts
-- Generating related files (migrations, controllers, etc.)
-- Creating resource controllers with automatic model binding
 
-if you want to use artisan commands 
+-   Understanding all available options for make:model command
+-   Using interactive model creation prompts
+-   Generating related files (migrations, controllers, etc.)
+-   Creating resource controllers with automatic model binding
+
+if you want to use artisan commands
 You don't need to remember them. All available options can be checked by providing -h or --help to the artisan command.
-here is a simple example 
+here is a simple example
 I think creating a Migration and Controller together with the Model is the most common.
 the code **php artisan make:model -mc**
 The resource Controller will be created if you provide the -r option.
@@ -20,27 +20,31 @@ the code **php artisan make:model -mcR**
 All Form Requests are injected automatically.
 
 Or if you need everything using the option -a or --all, everything will be generated.
+
 ## 2. Singular or Plural Models? What about multiple words?
-to change the conventional naming method use 
+
+to change the conventional naming method use
 class Role extends Model
 {
-    protected $table = 'user_roles';
+protected $table = 'user_roles';
 }
 
-
 ## 3. saving a model $fillable and $guarded
+
 in the project
 
 ## 4. Model Properties: Tables, Keys, Increments, Pages and Dates
+
 Summary of this lesson:
-- Customizing database table names and primary keys
-- Configuring auto-increment settings
-- Setting up pagination defaults
-- Managing timestamp properties and naming
+
+-   Customizing database table names and primary keys
+-   Configuring auto-increment settings
+-   Setting up pagination defaults
+-   Managing timestamp properties and naming
 
 class Task extends Model
 {
-    protected $table = 'project_tasks'; 
+protected $table = 'project_tasks';
 }
 
 Customize Primary Key
@@ -48,19 +52,20 @@ The next thing you can override is the primary key. By default, the primary key 
 
 public function up(): void
 {
-    Schema::create('tasks', function (Blueprint $table) {
-        $table->id('task_id'); 
-        $table->timestamps();
-    });
+Schema::create('tasks', function (Blueprint $table) {
+$table->id('task_id');
+$table->timestamps();
+});
 }
 
 Then, in the Model, you must provide the $primaryKey.
 
 class Task extends Model
 {
-    protected $table = 'project_tasks';
- 
-    protected $primaryKey = 'task_id'; 
+protected $table = 'project_tasks';
+
+    protected $primaryKey = 'task_id';
+
 }
 
 Customize Auto-Increments
@@ -68,13 +73,13 @@ What if you don't want it to be auto increment? Maybe you will set it up yoursel
 
 class Task extends Model
 {
-    protected $table = 'project_tasks';
- 
-    protected $primaryKey = 'task_id';
- 
-    public $incrementing = false; 
-}
+protected $table = 'project_tasks';
 
+    protected $primaryKey = 'task_id';
+
+    public $incrementing = false;
+
+}
 
 And then, in your migration, probably, you should have unsignedBigInteger() without auto-increment, instead of id().
 
@@ -82,31 +87,32 @@ Or, if you want to use UUIDs or ULIDs specifically for that there is a trait
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
- 
+
 class Task extends Model
 {
-    use HasUuids; 
- 
-    protected $table = 'project_tasks';
- 
-    protected $primaryKey = 'task_id';
- 
-    public $incrementing = false;
-}
+use HasUuids;
 
+    protected $table = 'project_tasks';
+
+    protected $primaryKey = 'task_id';
+
+    public $incrementing = false;
+
+}
 
 Customize Pagination
 The next thing you can provide or override is a property called per page, which is, by default, 15. It would be used in all of your pagination requests. So, for example, we can set it to 10.
 
 class Task extends Model
 {
-    protected $table = 'project_tasks';
- 
+protected $table = 'project_tasks';
+
     protected $primaryKey = 'task_id';
- 
+
     public $incrementing = false;
- 
-    protected $perPage = 10; 
+
+    protected $perPage = 10;
+
 }
 
 Customize Timestamps: Don't Use Them
@@ -116,17 +122,17 @@ You may have some other logic for timestamps or want to use something other than
 
 class Task extends Model
 {
-    protected $table = 'project_tasks';
- 
-    protected $primaryKey = 'task_id';
- 
-    public $incrementing = false;
- 
-    protected $perPage = 10;
- 
-    public $timestamps = false; 
-}
+protected $table = 'project_tasks';
 
+    protected $primaryKey = 'task_id';
+
+    public $incrementing = false;
+
+    protected $perPage = 10;
+
+    public $timestamps = false;
+
+}
 
 Then you don't need the timestamps() in the Migration.
 
@@ -134,22 +140,22 @@ Customize Timestamps: Rename Them
 In another case, the names of your timestamps are different. For example, if you have a database from an older project, not even Laravel, maybe you have not created the created_at and updated_at, but time_created and time_updated. Then, you can override the constants.
 class Task extends Model
 {
-    protected $table = 'project_tasks';
- 
+protected $table = 'project_tasks';
+
     protected $primaryKey = 'task_id';
- 
+
     public $incrementing = false;
- 
+
     protected $perPage = 10;
- 
+
     public $timestamps = false;
- 
-    const CREATED_AT = 'time_created'; 
- 
-    const UPDATED_AT = 'time_updated'; 
+
+    const CREATED_AT = 'time_created';
+
+    const UPDATED_AT = 'time_updated';
+
 }
 And, of course, then, in the migration, you don't use timestamps(). You create those fields manually.
-
 
 Bonus: Quickly Check Table/Model Properties
 If you made custom changes to your Model or DB Table, you may have forgotten about some of them. Laravel can help you to perform a quick check.
@@ -163,22 +169,22 @@ Another artisan command is model:show, which shows information about a provided 
 ## 5. Customize Model Default Template with Stubs
 
 Summary of this lesson:
-- Publishing and customizing model stubs
-- Modifying default model template structure
-- Removing default traits like HasFactory
-- Understanding stub customization options
+
+-   Publishing and customizing model stubs
+-   Modifying default model template structure
+-   Removing default traits like HasFactory
+-   Understanding stub customization options
 
 The default Eloquent Model is generated with a structure as below.
 
- 
 namespace App\Models;
- 
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
- 
+
 class Post extends Model
 {
-    use HasFactory;
+use HasFactory;
 }
 
 And it has a trait HasFactory. What if you want to remove it because you won't use it in the project and want all new Models not to have it?
@@ -187,6 +193,7 @@ You can overwrite the default structure by publishing stubs.
 php artisan stub:publish
 Now, you have a new folder /stubs at the root of your project. You can change more than a Model stub if your project needs it. The Model stub looks as below.
 stubs/model.stub:
+
 <?php
  
 namespace {{ namespace }};
@@ -568,5 +575,3 @@ If you launch the user creation code without specifying the email_verified_at co
 
 
 ## Contributing
-
-
