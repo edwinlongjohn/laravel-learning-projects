@@ -194,7 +194,7 @@ php artisan stub:publish
 Now, you have a new folder /stubs at the root of your project. You can change more than a Model stub if your project needs it. The Model stub looks as below.
 stubs/model.stub:
 
-<?php
+
  
 namespace {{ namespace }};
  
@@ -210,7 +210,7 @@ You can add and remove what you need from the stub.
 
 stubs/model.stub:
 
-<?php
+<php
  
 namespace {{ namespace }};
  
