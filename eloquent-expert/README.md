@@ -574,4 +574,54 @@ class UserObserver
 If you launch the user creation code without specifying the email_verified_at column in the DB, you should still see the column value with the date.
 
 
-## Contributing
+## Attributes: Accessors and Mutators
+
+Summary of this lesson:
+- Implementing Eloquent Accessors and Mutators
+- Working with attribute transformations
+- Understanding new vs old syntax
+- Handling date formatting with attributes
+
+Let's get familiar with a few more terms about Eloquent which are Accessors and Mutators or combined, they are called Attributes from Laravel 9.
+
+If you work with projects before Laravel 9, there may be different syntax in older tutorials or examples. I will show you the old syntax at the end of this lesson.
+
+So, Accessors and Mutators are used if you want to change the value when getting or setting the data. Now, why would you do that?
+
+Example 1: Accessors
+For example, you have a created_at field but want to show it in a human format.
+
+Because created_at is automatically casted to a datetime and is a Carbon object, you can use diffForHumans() directly on the field. Now, of course, you can do that in the blade or the API response directly. But what if you want to reuse it in all cases where you use the model, so it makes sense to have some kind of function inside the Model, which is an Accessor.
+
+So, you define the Accessor as an attribute. Interestingly, the Accessor method name is camel case, but it is returned as snake case.
+
+app/Models/User.php:
+
+use Illuminate\Database\Eloquent\Casts\Attribute;
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    protected function createdDiff(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => $this->created_at->diffForHumans(),
+        );
+    }
+}
+use Illuminate\Database\Eloquent\Casts\Attribute;
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    protected function createdDiff(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => $this->created_at->diffForHumans(),
+        );
+    }
+}
+
+(https://laraveldaily.com/uploads/2024/03/accessor-attribute-created-diff.png)[image]
