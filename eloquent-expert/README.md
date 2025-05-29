@@ -481,8 +481,7 @@ For example, you can send a notification to someone, notify the admin that the u
 
 In this example, I will log that the user was created with the email.
 
-app/Observers/UserObserver.php:
-
+**app/Observers/UserObserver.php:**
 use App\Models\User;
  
 class UserObserver
@@ -511,7 +510,6 @@ class User extends Authenticatable
 Or it can be registered in the AppServiceProvider.
 
 app/Providers/AppServiceProvider.php:
-
 use App\Models\User;
 use App\Observers\UserObserver;
  
@@ -530,7 +528,6 @@ In Laravel 10 and below, instead of AppServiceProvider, you would use EventServi
 If you create a user, there should be a new message in the logs.
 
 storage/logs/laravel.log:
-
 [2024-03-01 12:19:52] local.INFO: User was created: test@test.com
 
 More Methods in Observers
@@ -542,8 +539,7 @@ But more useful are methods like creating(). So for all of those created(), upda
 
 For example, if you want your user email to be verified automatically.
 
-app/Observers/UserObserver.php:
-
+**app/Observers/UserObserver.php:**
 use App\Models\User;
  
 class UserObserver
@@ -563,18 +559,6 @@ class UserObserver
 
 If you launch the user creation code without specifying the email_verified_at column in the DB, you should still see the column value with the date.
 
-## Attributes: Accessors and Mutators
-
-
-
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
 
 ## Contributing
 
