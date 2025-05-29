@@ -435,7 +435,7 @@ php artisan make:observer UserObserver --model=User
 
 The command will generate the UserObserver class in the app/Observers folder. And then, in that Observer class, you will find generated methods, created(), updated(), deleted(), restored(), and forcedDeleted(). The last two are for Soft Deletes.
 
-<?php
+<php
  
 namespace App\Observers;
  
