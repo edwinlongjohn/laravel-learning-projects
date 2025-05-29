@@ -624,4 +624,27 @@ class User extends Authenticatable
     }
 }
 
-(https://laraveldaily.com/uploads/2024/03/accessor-attribute-created-diff.png)[image]
+[image](https://laraveldaily.com/uploads/2024/03/accessor-attribute-created-diff.png)
+
+Example 2: Mutators
+Mutators are the opposite of Accessors: they are used when you need to change some value when saving the data.
+
+For example, you're creating a user, and the user is provided with a lowercase name, like "taylor". But you want to respect people and save that with the first uppercase letter anyway.
+
+To do that, you define the name as an attribute, and instead of get, you define a set.
+
+app/Models/User.php:
+
+use Illuminate\Database\Eloquent\Casts\Attribute;
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            set: fn($value) => ucfirst($value),
+        );
+    }
+}
