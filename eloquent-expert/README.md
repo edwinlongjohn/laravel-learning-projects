@@ -214,8 +214,358 @@ class {{ class }} extends Model
 {
     {{ factory }}   --remove 
 }
+## 6. Model casts(): Dates, Enum and More
+Summary of this lesson:
+- Implementing attribute casting in models
+- Working with datetime casts and Carbon
+- Setting up Enum casts
+- Understanding differences between Laravel 10 and 11 casting syntax
 
-### Premium Partners
+In your Eloquent Models, you can provide casts to automatically cast database columns to some type that you would need to use separately with that type of logic. Probably the most popular example is about date type.
+
+In the User Model, by default, the email_verified_at is cast to datetime.
+class User extends Authenticatable
+{
+    // ...
+ 
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime', 
+            'password' => 'hashed',
+        ];
+    }
+}
+
+In Laravel 11, you can use either a method or a property, with method having higher importance.
+
+Another example is if you use PHP Enum classes, you must cast the database column to that Enum.
+
+For example, an Enum class with some levels in DB would be stored as an integer
+app/Enums/UserLevel.php:
+to make enums you use php artisan make:enums UserLevel
+
+enum UserLevel: int
+{
+    case Junior = 1;
+    case Mid = 2;
+    case Senior = 3;
+}
+
+In the User Model, the field is casted to that enum class.
+
+use App\Enums\UserLevel;
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'user_level' => UserLevel::class, 
+        ];
+    }
+}
+
+
+## 7. FirstOrCreate, and Other 2-in-1 Methods
+
+Example 2: firstOrNew()
+Similar to the first example, but here the record isn't saved to the database. You may want to do some more magic or more operations with that.
+
+use App\Models\User;
+ 
+class HomeController extends Controller
+{
+    public function index()
+    {
+        $user = User::firstOrNew(
+            ['email' => 'admin@admin.com'],
+            ['name' => 'Admin', 'password' => 'password']
+        );
+ 
+        return $user->id;
+    }
+}
+
+So, the result is the user object in the variable, but it still needs to be saved into the database.
+
+Example 4: upsert()
+And the final example is upsert(). If you have, for example, some Excel sheet with the updated data for the user and you don't want to do a foreach loop and update them automatically one by one. You want to have one sentence.
+
+So imagine that the first two lines come with email, name, and password from the Excel sheet, and those should be the new values for the users.
+
+use App\Models\User;
+ 
+class HomeController extends Controller
+{
+    public function index()
+    {
+        User::upsert([
+            ['email' => 'admin@admin.com', 'name' => 'Admin 1', 'password' => 'password'],
+            ['email' => 'admin2@admin.com', 'name' => 'Admin 2', 'password' => 'password'],
+        ], ['email'], ['name', 'password']);
+    }
+}
+
+Now, how do we identify the users? We identify them by email and update name and password fields. For every line, it searches for the email and updates the record with values in the last parameter, name, and password.
+
+So, these are helpful Eloquent two-in-one methods to help you avoid two or more sentences. Instead, doing something more compactly.
+
+## 8. WasCreated, IsDirty and Other Checks If Model Was Changed
+
+Summary of this lesson:
+- Using wasRecentlyCreated() to check model status
+- Implementing isDirty() for tracking changes
+- Understanding wasChanged() for saved changes
+- Comparing pre and post-save state detection
+
+Example 1: wasRecentlyCreated()
+So there is firstOrCreate(), which tries to find the first record by email or creates that with name and password.
+
+use App\Models\User;
+ 
+class HomeController extends Controller
+{
+    public function index()
+    {
+        $user = User::firstOrCreate(
+            ['email' => 'admin@admin.com'],
+            ['name' => 'Admin', 'password' => 'password']
+        );
+ 
+        dump($user->wasRecentlyCreated ? 'Created' : 'Found');
+    }
+}
+And there's wasRecentlyCreated. This is a property, not a function.
+
+And if you launch that code on an empty database the first time, it will say created because it created the object, but if you relaunch it the second time, it will say found because it didn't create the object during that second request.
+
+Example 2: isDirty()
+The second helpful method is isDirty(). If you change any Eloquent method property during the request before saving, you will launch user save at some point, but in the meantime, you've changed some properties.
+
+Then, you can check whether some property or all properties were changed.
+
+use App\Models\User;
+ 
+class HomeController extends Controller
+{
+    public function index()
+    {
+        $user = User::firstOrCreate(
+            ['email' => 'admin@admin.com'],
+            ['name' => 'Admin', 'password' => 'password']
+        );
+ 
+        dump($user->wasRecentlyCreated ? 'Created' : 'Found');
+ 
+        $user->name = 'Admin updated'; 
+        dump($user->isDirty() ? 'Edited' : 'Unedited');
+        dump($user->isDirty('name') ? 'Name edited' : 'Name not edited');
+        dump($user->isDirty('email') ? 'Email Edited' : 'Email not edited'); 
+    }
+}
+
+So, at the start, we have a name as "admin", and then we change the name. If you try to launch this code, the general isDirty() should return "Edited".
+
+With the name field, it should return "Name edited", but with the email field, it should return "Email not edited".
+
+Example 3: wasChanged()
+The isDirty() method works before you save the data into the database.
+
+If you want to check whether the object was changed and saved to the database, then there's a separate method wasChanged().
+
+If you want to check whether the database has the newer data, you use wasChanged() with the same logic, either without parameters or with a parameter of a specific column.
+
+use App\Models\User;
+ 
+class HomeController extends Controller
+{
+    public function index()
+    {
+        $user = User::firstOrCreate(
+            ['email' => 'admin@admin.com'],
+            ['name' => 'Admin', 'password' => 'password']
+        );
+ 
+        dump($user->wasRecentlyCreated ? 'Created' : 'Found');
+ 
+        $user->name = 'Admin updated';
+        dump($user->isDirty() ? 'Edited' : 'Unedited');
+        dump($user->isDirty('name') ? 'Name edited' : 'Name not edited');
+        dump($user->isDirty('email') ? 'Email edited' : 'Email not edited');
+ 
+        dump($user->wasChanged() ? 'Changed' : 'Unchanged'); 
+        $user->save();
+        dump($user->wasChanged() ? 'Changed' : 'Unchanged');
+        dump($user->wasChanged('name') ? 'Name changed' : 'Name not changed');
+        dump($user->wasChanged('email') ? 'Email changed' : 'Email not changed'); 
+    }
+}
+
+Now, if you launch the code, at first, you will see it unchanged before the save call.
+
+Then, when the save is called, you will see the change becomes true.
+
+The name change becomes true because the name was changed, but the email wasn't changed.
+
+### 9 Model Observers and Their Methods
+Summary of this lesson:
+- Creating and configuring Model Observers
+- Understanding Observer lifecycle methods
+- Registering Observers using different approaches
+- Implementing pre and post-event Observer methods
+
+If you want to perform some action when the Eloquent object is created or updated, it is usually done with the Observer class. It's like events and listeners in Laravel, but all the listeners related to the same Eloquent Model are grouped into one class called Observer.
+
+Generate Observers
+Observer can be generated using the Artisan command. Typically, you should prefix Observer with the Model name for the name. Additionally, you can pass --model option and provide the Model name.
+
+php artisan make:observer UserObserver --model=User
+
+The command will generate the UserObserver class in the app/Observers folder. And then, in that Observer class, you will find generated methods, created(), updated(), deleted(), restored(), and forcedDeleted(). The last two are for Soft Deletes.
+
+<?php
+ 
+namespace App\Observers;
+ 
+use App\Models\User;
+ 
+class UserObserver
+{
+    /**
+     * Handle the User "created" event.
+     */
+    public function created(User $user): void
+    {
+        // ...
+    }
+ 
+    /**
+     * Handle the User "updated" event.
+     */
+    public function updated(User $user): void
+    {
+        // ...
+    }
+ 
+    /**
+     * Handle the User "deleted" event.
+     */
+    public function deleted(User $user): void
+    {
+        // ...
+    }
+ 
+    /**
+     * Handle the User "restored" event.
+     */
+    public function restored(User $user): void
+    {
+        // ...
+    }
+ 
+    /**
+     * Handle the User "forceDeleted" event.
+     */
+    public function forceDeleted(User $user): void
+    {
+        // ...
+    }
+}
+
+For example, you can send a notification to someone, notify the admin that the user was created, or inform the user themselves with some welcome email.
+
+In this example, I will log that the user was created with the email.
+
+app/Observers/UserObserver.php:
+
+use App\Models\User;
+ 
+class UserObserver
+{
+    public function created(User $user): void
+    {
+        info('User was created: ' . $user->email); 
+    }
+ 
+    // ...
+}
+
+Register Observers
+It's not enough to generate an Observer. We need to register that into the system. Registration can be done in two ways. The first one uses the PHP attribute ObservedBy on the Model.
+
+app/Models/User.php:
+
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+ 
+#[ObservedBy(UserObserver::class)] 
+class User extends Authenticatable
+{
+    // ...
+}
+
+Or it can be registered in the AppServiceProvider.
+
+app/Providers/AppServiceProvider.php:
+
+use App\Models\User;
+use App\Observers\UserObserver;
+ 
+class AppServiceProvider extends ServiceProvider
+{
+    // ...
+ 
+    public function boot(): void
+    {
+        User::observe(UserObserver::class); 
+    }
+}
+
+In Laravel 10 and below, instead of AppServiceProvider, you would use EventServiceProvider.
+
+If you create a user, there should be a new message in the logs.
+
+storage/logs/laravel.log:
+
+[2024-03-01 12:19:52] local.INFO: User was created: test@test.com
+
+More Methods in Observers
+In addition to the methods that are automatically generated when you run the artisan command, you can create methods for the events that Laravel also supports.
+
+For example, created() and updated() are separate methods, but one method is saved(), which will be automatically launched in both cases in the created and updated.
+
+But more useful are methods like creating(). So for all of those created(), updated(), and deleted(), which happen after the record is saved in the database, you can also define creating(), updating(), and deleting(), which would happen before the record is changed in the database. For these methods, the parameter is the same Model.
+
+For example, if you want your user email to be verified automatically.
+
+app/Observers/UserObserver.php:
+
+use App\Models\User;
+ 
+class UserObserver
+{
+    public function updating(User $user): void 
+    {
+        $user->email_verified_at = now();
+    }
+ 
+    public function created(User $user): void
+    {
+        info('User was created: ' . $user->email);
+    }
+ 
+    // ...
+}
+
+If you launch the user creation code without specifying the email_verified_at column in the DB, you should still see the column value with the date.
+
+## Attributes: Accessors and Mutators
+
+
 
 - **[Vehikl](https://vehikl.com)**
 - **[Tighten Co.](https://tighten.co)**
@@ -228,16 +578,4 @@ class {{ class }} extends Model
 
 ## Contributing
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
 
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
