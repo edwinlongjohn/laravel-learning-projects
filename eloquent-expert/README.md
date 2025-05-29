@@ -214,12 +214,12 @@ stubs/model.stub:
  
 namespace {{ namespace }};
  
-{{ factoryImport }}   - remove
+{{ factoryImport }} to be removed 
 use Illuminate\Database\Eloquent\Model;
  
 class {{ class }} extends Model
 {
-    {{ factory }}   -remove 
+    {{ factory }}   to be removed
 }
 ## 6. Model casts(): Dates, Enum and More
 Summary of this lesson:
