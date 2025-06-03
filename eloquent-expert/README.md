@@ -1203,9 +1203,65 @@ class HomeController extends Controller
     }
 }
 
+
+## 18. SubQueries and SubSelects: One Step Towards Raw SQL
+Summary of this lesson:
+- Use addSelect() with subqueries to get specific data
+- Relationship approach loads all models, while subqueries reduce memory usage significantly
+- Subquery method executes a single query vs multiple queries with relationships
+- Performance difference for relationships vs subqueries
+
+This lesson explores techniques for retrieving the latest post for each user in a Laravel application, comparing relationship-based approaches with subselects.
+
+The Challenge
+Our task is to load the latest record (post) for each user in our system. Our expected output should display:
+
+Username
+The creation date of their latest post
+There are two ways to achieve the result:
+
+1. Eloquent relationship
+2. Adding a subselect
+
+Approach 1: Eloquent Relationships
+One way to accomplish this is by defining a special relationship in your User model specifically for the latest post:
+
+app/Models/User.php:
+
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    public function posts(): HasMany
+    {
+        return $this->hasMany(Post::class);
+    }
+ 
+    public function lastPost(): HasOne
+    {
+        return $this->hasOne(Post::class)->latest();
+    }
+}
+
+Then in your controller:
+
+$users = User::with('lastPost')->get();
+And in the View to show the result:
+
+@foreach ($users as $user)
+    <div>{{ $user->name }}: {{ $user->lastPost->created_at }}</div>
+@endforeach
+
+
+
+
 [example explaining this ](https://laraveldaily.com/uploads/2024/03/eloquent-findor.png)
 
 
+## 12. Model API Docs and 3 More Random Methods
 
 
 [example explaining this ](https://laraveldaily.com/uploads/2024/03/eloquent-findor.png)

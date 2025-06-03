@@ -24,7 +24,7 @@ class HomeController extends Controller
             'password' => 'password',
             'email_verified_at' => now(),
         ]);
-        dd($user->wasRecentlyCreated ? 'User was created' : 'User already exists');
+        //dd($user->wasRecentlyCreated ? 'User was created' : 'User already exists');
         // $user = User::firstOrNew(
         //     ['email' => $email],
         //     ['name' => fake()->name(),
