@@ -648,3 +648,570 @@ class User extends Authenticatable
         );
     }
 }
+
+When creating a user, the name will be set to the first uppercase letter before saving it into the database.
+
+Example 3: Accessor & Mutator together
+Let's get to the example of mixing of Accessor and Mutator, using get and set in the same field.
+
+A typical example would be date formatting before and after. For example, you have a birth date formatted in some non-standard format, different from the database. In the database, the date should be saved in Y-m-d, but your users may provide it in a different format.
+
+So, when saving the data, you must format it into the MySQL format. When getting the data, you need to format it back to the user format, so users won't see how it is stored in the database.
+
+To do that, we would define a birthDate attribute. The actual user field is birth_date with underscore in the database.
+
+app/Models/User.php:
+
+use Illuminate\Support\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    protected function birthDate(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => Carbon::createFromFormat('Y-m-d', $value)->format('m/d/Y'),
+            set: fn($value) => Carbon::createFromFormat('m/d/Y', $value)->format('Y-m-d'),
+        );
+    }
+}
+
+You can try to create a User.
+User::create([
+    'name' => 'Taylor',
+    'email' => 'test@test.com',
+    'password' => 'password',
+    'birth_date' => '01/25/1990',
+]);
+
+In the database, the birth date is in the correct format.
+[image to database](https://laraveldaily.com/uploads/2024/03/attribute-birthdate-db.png)
+
+And, when the field is called, the format is different.
+[different](https://laraveldaily.com/uploads/2024/03/attribute-birthdate-get-value.png)
+
+Old Syntax
+The old syntax still works, but it's not in the official documentation of Laravel: the newer syntax aimed to combine getters and setters in the same function.
+
+So, the old syntax for the function name consists of three parts:
+
+Prefix of get or set
+The column name (CamelCase)
+The word Attribute
+The example for a birth_date column would be getBirthDateAttribute() and setBirthDateAttribute().
+
+app/Models/User.php:
+use Illuminate\Support\Carbon;
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    public function setBirthDateAttribute($value)
+    {
+        $this->attributes['birth_date'] = Carbon::createFromFormat('m/d/Y', $value)->format('Y-m-d');
+    }
+ 
+    public function getBirthDateAttribute($value)
+    {
+        return Carbon::createFromFormat('Y-m-d', $value)->format('m/d/Y');
+    }
+}
+
+Notice: For columns like created_at and updated_at, be careful when using accessors to override the values of the same fields. For more explanation on why, you can check the YouTube video Eloquent Accessors: Dates, Casts, and "Wrong Way"
+
+Performance Considerations with Accessors - not fully understand
+While Accessors are powerful, they can lead to performance issues if not used carefully.
+
+A common mistake is loading relationships within Accessors or Attribute methods in Eloquent models.
+
+Here's an example. In a User model, you might have an Accessor that determines a user's identity which calls functions that call relationships:
+
+app/Models/User.php:
+
+protected function identity(): Attribute
+{
+    return Attribute::make(
+        get: function () {
+            if ($this->is_full_identified()) {
+                return 1;
+            }
+ 
+            if ($this->is_ghost()) {
+                return 3;
+            }
+ 
+            return 0;
+        },
+    );
+}
+ 
+public function is_full_identified(): bool
+{
+    return $this->networks->isNotEmpty() || (!is_null($this->name) && !is_null($this->phone));
+}
+ 
+public function is_ghost(): bool
+{
+    return $this->ghosts->isNotEmpty() && is_null($this->email) && $this->networks->isEmpty();
+}
+
+The task is to calculate how many users are:
+
+Fully identified
+Ghosts
+Or guests
+For calculating users, there is a service with the method get_identification_status() that accepts a Collection of users. Inside this method, the $user->identity Attribute is called in a foreach loop.
+
+app/Services/UserService.php:
+
+## 11. touch() Method To Work With updated_at
+Summary of this lesson:
+- Using touch() to update timestamps
+- Applying touch() to multiple models
+- Managing relationship timestamps
+- Controlling automatic timestamp updates
+
+A "quick tip" lesson. Laravel has a few helper methods to update your Eloquent Model updated_at timestamp. For example, on the user Model, you have some users, and you want to update just its updated_at value without touching any other data.
+
+[image](https://laraveldaily.com/uploads/2024/03/updated-at-field.png)
+You can use touch() on the Model, which will update only the updated_at field.
+[after touch](https://laraveldaily.com/uploads/2024/03/touch-updated-at.png)
+Since Laravel 9.25, there's a possibility to use touch() on multiple models with Eloquent query.
+
+[multiple model](https://laraveldaily.com/uploads/2024/03/touch-multiple-models.png)
+Records with an ID bigger than two will be updated, and the result is how many records are updated. In this example, two.
+
+You can also touch a parent relationship Model. The relationships to be touched are defined on the Model in the $touches property as an array.
+
+For example, you have Post and User Models. Users have many Tasks.
+// In Task model
+protected $touches = ['user'];
+
+// When this task is updated...
+$task->update(['duration' => '3 hours']);
+
+// The associated user's updated_at will also be updated
+// In tinker
+$task = Task::first();
+$user = $task->user;
+$originalUpdated = $user->updated_at;
+
+// Update the task
+$task->update(['name' => 'New Name']);
+
+// Verify user was touched
+$user->refresh();
+$user->updated_at->gt($originalUpdated); // Returns true
+
+Finally, the other way around. If you don't want to auto-update the timestamp during the data update, you can set timestamps to false for that update request.
+$comment->timestamps = false;
+$comment->update([ ... ]);
+
+## 12. Model API Docs and 3 More Random Methods
+Summary of this lesson:
+- Exploring Laravel API documentation
+- Understanding hidden Model methods
+- Working with increment/decrement operations
+- Using quiet save operations
+
+The final thing I want to do in this section about various methods and properties of Eloquent Model structure is to refer you to the official API docs. Only a few people know that, but in addition to the official Laravel documentation, API documentation lists all potential methods, properties, and syntax options.
+
+So if you go to api.laravel.com and look for an example, specifically for Model which is inside of Illuminate/Database/Eloquent, there's a considerable amount. You can find a lot of hidden gems.
+For example, what I haven't shown you in this course, increment(). There are a few methods to increment or decrement some values in your Eloquent Model instead of doing plus one and save or update you just increment or decrement by some amount.
+
+Also, there's an interesting method called is(). Instead of comparing two models and comparing their IDs manually, you can call on the Model is() method and pass another Model into the method. Eloquent would compare those objects and their IDs and return true or false.
+
+Another example of interesting method called saveQuietly() or updateQuietly(). Using these methods when saving or updating events won't be fired. If you have observers, listeners on events, or something like that, they would not be fired if you save or update quietly.
+
+These are just a few examples of interesting methods or methods that are fired under the hood when we call other methods. So for those, I recommend you plan some time because it's a very long page, or you can do that in batches daily. Analyze this page, and you will find something interesting you have yet to use.
+
+## 13. find(), all(), first() and Their Extra Options
+- Understanding different all() and find() method variations
+- Using firstOrFail() and firstOr() methods
+- Working with specific field selections
+- Handling model not found scenarios
+
+ Did you know you can specify the fields? The all() method accepts an array of fields to be returned.
+ [showing all example with arrays of fields](https://laraveldaily.com/uploads/2024/03/eloquent-all-with-fields.png)
+ Next, instead of all(), we can use find() to find a specific object. In the find() method, you specify the primary key value, ID, by default.
+ Did you know you can specify columns as a second parameter?
+  [example explaining this ](https://laraveldaily.com/uploads/2024/03/eloquent-find-with-fields.png)
+Also, you can specify an array of primary keys. This way, it will return a collection instead of an object.
+[example explaining this ](https://laraveldaily.com/uploads/2024/03/eloquent-find-multiple.png)
+
+Another well-known and well-used method is findOrFail(), which means that it tries to find the records with provided keys, and if it doesn't find it, it throws an Exception.
+There are also less-known methods like firstOr(), and then you can provide a callback function to perform whatever you want. For example, instead of 404, throw a different status error.
+[example explaining this ](https://laraveldaily.com/uploads/2024/03/eloquent-firstor.png)
+Similarly, you can do findOr() and the second parameter a closure.
+[example explaining this ](https://laraveldaily.com/uploads/2024/03/eloquent-findor.png)
+
+Speaking of optimizations with these Eloquent methods, it's important to remember that selecting only the specific columns you need can significantly improve performance.
+
+When we use methods like all() or find() without specifying columns, Laravel loads every field from the table.
+
+The select() method is especially useful when you want to select columns from a relationship:
+$posts = Post::select('title', 'user_id')
+    ->with(['user' => function($query) {
+        $query->select('id', 'name', 'email');
+    }])
+    ->get();
+Or, a shorter version
+{
+    $posts = Post::select('title', 'user_id')
+    ->with('user:id,name,email')
+    ->get();
+}
+
+Just remember to always include the primary and foreign keys needed for the relationships to work properly. In the example above, we need user_id from posts and id from users.
+
+This technique is particularly valuable when your tables contain large text fields or when you're building APIs where response size matters.
+
+
+
+
+## 14. whereDate() and other whereX Methods
+Summary of this lesson:
+- Using whereDate() and related date query methods
+- Understanding different date filtering approaches
+- Working with DB::raw() for date queries
+- Best practices for column-specific where clauses
+
+Example 1: DB::raw()
+Because created_at is a datetime column, the SQL date function can be used.
+User::where(\DB::raw('DATE(created_at)'), '2024-03-01')->first();
+
+Example 2: whereDate()
+Instead of doing DB::raw() and using SQL functions, you can use the whereDate() Eloquent method.
+User::whereDate('created_at', '2024-03-01')->first();
+
+Also, instead of date, you can check year, month, and day.
+User::whereYear('created_at', '2024')->first();
+User::whereMonth('created_at', '03')->first();
+User::whereDay('created_at', '1')->first();
+
+A "Trick" That I Don't Recommend
+I will show you a technique that is not recommended, and I haven't even found that in the documentation, but it's a nifty trick to know. I never used it, and I don't recommend it.
+
+You can prefix where with the column name. For example, typically, when searching for email, you would do the following:
+User::where('email', 'test@test.com')->first();
+
+But you can do it like this:
+User::whereEmail('test@test.com')->first();
+
+Also, you can provide more columns with the word and.
+User::whereEmailAndCreatedAt('test@test.com', '2023-03-01')->first();
+
+
+## 15. Brackets Between "and" / "or" Conditions
+Summary of this lesson:
+- Managing complex where conditions
+- Understanding query brackets and priorities
+- Using proper query grouping techniques
+- Implementing whereAny() and whereAll() methods
+
+Imagine the scenario where you want to filter the users with email_verified_at and some other condition with or. For example, we're filtering users with email_verified_at not null and where the day of created_at is equal to 4 or 5.
+
+$users = User::whereNotNull('email_verified_at')
+    ->whereDay('created_at', 4)
+    ->orWhereDay('created_at', 5)
+    ->get();
+ 
+foreach ($users as $user) {
+    dump($user->id . ': ' . $user->name);
+}
+
+In the database, I have three users.
+[three user's shown ](https://laraveldaily.com/uploads/2024/03/and-or-db-users.png)
+Two of them are with verified email, and all are created on the fourth or fifth day. What should this query return?
+Probably two users, because we're querying the email_verified_at, which should be true for two out of three records. But the result is all three records:
+[example explaining this ](https://laraveldaily.com/uploads/2024/03/and-or-bad-result.png)
+
+Let's check the SQL query.
+select * from "users"
+    where "email_verified_at" is not null
+        and strftime('%d', "created_at") = cast('04' as text)
+        or strftime('%d', "created_at") = cast('05' as text)
+
+NOTE: The SQL query syntax is for SQLite.
+
+If you know the theory of SQL, then the order of that sequence would be exactly this: email, and day, and then or day.
+
+Which means the filter query is either "email_verified_at" is not null and strftime('%d', "created_at") = cast('04' as text) or strftime('%d', "created_at") = cast('05' as text).
+
+In this example, even if the first filter for verified email and the fourth day is false, the second filter for the fifth day is true. So, you must add the dates filter in the brackets.
+
+To add date filters in the brackets they must go into another where clause. Then, this additional where will make the date filter one sub statement
+
+use Illuminate\Database\Eloquent\Builder;
+ 
+$users = User::whereNotNull('email_verified_at')
+    ->where(function (Builder $query) { 
+        $query->whereDay('created_at', 4)
+            ->orWhereDay('created_at', 5);
+    }) 
+    ->get();
+
+If we check the SQL query now, the date conditions are in the brackets.
+    where "email_verified_at" is not null
+        and (strftime('%d', "created_at") = cast('04' as text)
+        or strftime('%d', "created_at") = cast('05' as text))
+
+Now the result is correct with only two users because the query is correct:
+
+The point here is that if you have and and or conditions, be careful in which order they execute and whether they return the correct results.
+
+Quote from the official documentation:
+
+You should always group orWhere calls in order to avoid unexpected behavior when global scopes are applied.
+
+Additionally, since Laravel 10.47, if you want to search multiple fields for the same keyword instead of using where() and providing where columns in a closure:
+
+$search = $request->input('search');
+ 
+$users = User::whereNotNull('email_verified_at')
+    ->where(function (Builder $query) use ($search) {
+        $query->where('name', 'LIKE', "%{$search}%")
+            ->orWhere('email', 'LIKE', "%{$search}%");
+    })
+    ->get();
+You can use a whereAny() method and provide columns as an array.
+$search = $request->input('search');
+ 
+$users = User::whereNotNull('email_verified_at')
+    ->whereAny([
+        'name',
+        'email'
+    ], 'LIKE', "%{$search}%")
+    ->get();
+
+Or if you need every column to have the keyword, then the whereAll() method could be used.
+$search = $request->input('search');
+ 
+$users = User::whereNotNull('email_verified_at')
+    ->whereAll([
+        'name',
+        'email'
+    ], 'LIKE', "%{$search}%")
+    ->get();
+
+The whereAll() will make a query with a AND operator, and whereAny() will use the OR operator.
+
+
+## 16. Local and Global Scopes for Repeating Conditions
+Now, let's talk about repeating queries in Eloquent. For example, you have a where() condition, and you want to repeat the same condition in other parts of your application and other Controllers, in other classes, and so on.
+$users = User::whereNotNull('email_verified_at')->get();
+ 
+foreach ($users as $user) {
+    dump($user->id . ': ' . $user->name);
+}
+
+You may want to extract that condition into some function, which you would be able to reference in a shorter way. For that, you can use scopes.
+
+
+Local Scope
+You can define that where() condition and put that in a Model in a function with the prefix scope and then scope name.
+
+For example, we can call it scopeVerified(). The parameter is the Eloquent builder, and you provide the where statement in the function.
+
+app/Models/User.php:
+
+use Illuminate\Database\Eloquent\Builder;
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    public function scopeVerified(Builder $query): void
+    {
+        $query->whereNotNull('email_verified_at');
+    }
+}
+
+Since Laravel 12, there's another new syntax: instead of prefixing the method name like scopeXXXXX(), you can just add the PHP attribute on top and change the method from public to protected:
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+ 
+// ...
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    #[Scope]
+    protected function verified(Builder $query): void
+    {
+        $query->whereNotNull('email_verified_at');
+    }
+}
+
+To use this scope, instead of the where() condition, we call the scope name, which in this case is verified().
+$users = User::whereNotNull('email_verified_at')->get(); 
+$users = User::verified()->get(); 
+ 
+foreach ($users as $user) {
+    dump($user->id . ': ' . $user->name);
+}
+
+Dynamic Scopes
+Scopes may have parameters, and such scopes are called dynamic scopes. For example, a user has a type. In the scope, you can add parameters as many as you need.
+
+app/Models/User.php:
+
+$users = User::verified()->typeOf('admin')->get();
+ 
+foreach ($users as $user) {
+    dump($user->id . ': ' . $user->name);
+}
+
+These scopes are called local scopes, which you call locally from your Controller or wherever.
+
+Global Scopes
+Global scopes are applied automatically globally on all the Models. There are two ways to use global scopes.
+
+Option 1: Callback Function
+The first option is called Anonymous Global Scopes, where you add global scope in the Model inside the booted() method.
+
+app/Models/User.php:
+
+use Illuminate\Database\Eloquent\Builder;
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    protected static function booted(): void
+    {
+        static::addGlobalScope('verified', function (Builder $builder) {
+            $builder->whereNotNull('email_verified_at');
+        });
+    }
+}
+
+
+If we get all the users, the global scope will be applied, and only the verified users will be shown.
+
+$users = User::all();
+ 
+foreach ($users as $user) {
+    dump($user->id . ': ' . $user->name);
+}
+
+Option 2: Scope Class
+The second option is to generate a global using the make:scope artisan command and add the query in the apply() method of the generated scope class.
+
+php artisan make:scope VerifiedScope
+
+Scopes are generated in the app/Models/Scopes folder. We can add the where statement to the VerifiedScope class.
+
+app/Models/Scopes/VerifiedScope.php:
+class VerifiedScope implements Scope
+{
+    public function apply(Builder $builder, Model $model): void
+    {
+        $builder->whereNotNull('email_verified_at'); 
+    }
+}
+
+Next, we must apply the global scope using the ScopedBy attribute on the Model.
+
+app/Models/User.php:
+use App\Models\Scopes\VerifiedScope;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
+ 
+#[ScopedBy([VerifiedScope::class])] 
+class User extends Authenticatable
+{
+    // ...
+}
+
+Or, you can register it in the Model's booted() method.
+
+app/Models/User.php:
+
+use App\Models\Scopes\VerifiedScope;
+ 
+class User extends Authenticatable
+{
+    // ...
+ 
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new VerifiedScope);
+    }
+}
+
+Removing Global Scopes
+In some cases, you might need to remove the global scope from the query. You can use the withoutGlobalScope() method in the Eloquent query. Without any parameters, it will remove all global scopes.
+
+// $users = User::withoutGlobalScopes()->get()
+
+You can provide the global scope which you need to be removed.
+use App\Models\Scopes\VerifiedScope;
+ 
+#$users = User::withoutGlobalScope(VerifiedScope::class)->get();
+Or, provide only a name.
+#$users = User::withoutGlobalScope('verified')->get();
+In the array, you can provide multiple scopes to be removed.
+User::withoutGlobalScopes([
+    FirstScope::class, SecondScope::class
+])->get();
+
+You can use scopes for repeating queries, but be specifically careful with global scopes because, in the future, some other developers may not even know that the scope exists and would have unexpected results for their queries.
+
+
+## 17. Instead of Multiple If-Else, Use Eloquent When()
+
+Summary of this lesson:
+- Using when() for conditional queries
+- Implementing dynamic query conditions
+- Replacing if-else statements with when()
+- Understanding conditional clause benefits
+
+Now, instead of making an if statement, we can use the when method on the Eloquent query. The first parameter must be the condition, and the second parameter is the closure with the query.
+
+use Illuminate\Database\Eloquent\Builder;
+ 
+class HomeController extends Controller
+{
+    public function index(Request $request)
+    {
+        $tasks = Task::query() 
+            ->when($request->integer('user_id'), function (Builder $query) use ($request) {
+                $query->where('user_id', $request->integer('user_id'));
+            })
+            ->when($request->boolean('completed'), function (Builder $query) use ($request) {
+                $query->where('is_completed', $request->boolean('completed'));
+            })->get(); 
+ 
+        if ($request->has('user_id')) { 
+            $query->where('user_id', $request->integer('user_id'));
+        }
+ 
+        if ($request->has('completed')) {
+            $query->where('is_completed', $request->boolean('completed'));
+        }
+ 
+        $tasks = $query->get(); 
+ 
+        foreach ($tasks as $task) {
+            dump($task->id . ': ' . $task->description);
+        }
+    }
+}
+
+[example explaining this ](https://laraveldaily.com/uploads/2024/03/eloquent-findor.png)
+
+
+
+
+[example explaining this ](https://laraveldaily.com/uploads/2024/03/eloquent-findor.png)
+
+
+
+
+
+## 12. Model API Docs and 3 More Random Methods
