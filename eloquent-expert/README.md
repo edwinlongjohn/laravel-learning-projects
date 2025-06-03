@@ -1250,11 +1250,11 @@ Then in your controller:
 
 $users = User::with('lastPost')->get();
 And in the View to show the result:
-
+{
 @foreach ($users as $user)
     <div>{{ $user->name }}: {{ $user->lastPost->created_at }}</div>
 @endforeach
-
+}
 
 
 
